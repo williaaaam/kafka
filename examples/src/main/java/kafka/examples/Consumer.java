@@ -57,7 +57,7 @@ public class Consumer extends ShutdownableThread {
             props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
         }
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
+        // 初始化KafkaConsumer
         consumer = new KafkaConsumer<>(props);
         this.topic = topic;
         this.numMessageToConsume = numMessageToConsume;
@@ -71,6 +71,7 @@ public class Consumer extends ShutdownableThread {
 
     @Override
     public void doWork() {
+        // 订阅主题
         consumer.subscribe(Collections.singletonList(this.topic));
         ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofSeconds(1));
         for (ConsumerRecord<Integer, String> record : records) {

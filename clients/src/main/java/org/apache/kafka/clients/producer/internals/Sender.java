@@ -296,6 +296,7 @@ public class Sender implements Runnable {
      *
      */
     void runOnce() {
+        // 事务
         if (transactionManager != null) {
             try {
                 transactionManager.maybeResolveSequences();
@@ -324,13 +325,17 @@ public class Sender implements Runnable {
         }
 
         long currentTimeMs = time.milliseconds();
+        // 发送数据给kafka集群
         long pollTimeout = sendProducerData(currentTimeMs);
+        // 获取发送结果：kafka集群->sender线程
         client.poll(pollTimeout, currentTimeMs);
     }
 
     private long sendProducerData(long now) {
+        //  sender线程将缓存队列数据发送到kafka集群,所以要获取分区等元数据
         Cluster cluster = metadata.fetch();
         // get the list of partitions with data ready to send
+        // ready:判断是否准备好：linger.ms和batch.size
         RecordAccumulator.ReadyCheckResult result = this.accumulator.ready(cluster, now);
 
         // if there are any partitions whose leaders are not known yet, force metadata update
@@ -347,6 +352,7 @@ public class Sender implements Runnable {
         }
 
         // remove any nodes we aren't ready to send to
+        // kafka集群是否准备好
         Iterator<Node> iter = result.readyNodes.iterator();
         long notReadyTimeout = Long.MAX_VALUE;
         while (iter.hasNext()) {
@@ -358,6 +364,7 @@ public class Sender implements Runnable {
         }
 
         // create produce requests
+        // 发送每个节点数据
         Map<Integer, List<ProducerBatch>> batches = this.accumulator.drain(cluster, result.readyNodes, this.maxRequestSize, now);
         addToInflightBatches(batches);
         if (guaranteeMessageOrder) {
@@ -405,6 +412,7 @@ public class Sender implements Runnable {
             // otherwise the select time will be the time difference between now and the metadata expiry time;
             pollTimeout = 0;
         }
+        // 发送请求
         sendProduceRequests(batches, now);
         return pollTimeout;
     }
@@ -836,8 +844,10 @@ public class Sender implements Runnable {
         RequestCompletionHandler callback = response -> handleProduceResponse(response, recordsByPartition, time.milliseconds());
 
         String nodeId = Integer.toString(destination);
+        //
         ClientRequest clientRequest = client.newClientRequest(nodeId, requestBuilder, now, acks != 0,
                 requestTimeoutMs, callback);
+        // 发送
         client.send(clientRequest, now);
         log.trace("Sent produce request to {}: {}", nodeId, requestBuilder);
     }

@@ -163,8 +163,11 @@ public class SubscriptionState {
     }
 
     public synchronized boolean subscribe(Set<String> topics, ConsumerRebalanceListener listener) {
+        // 注册负载均衡监听器
         registerRebalanceListener(listener);
+        // 按照主题自动订阅模式
         setSubscriptionType(SubscriptionType.AUTO_TOPICS);
+        // 判断是否需要更改订阅主题
         return changeSubscription(topics);
     }
 

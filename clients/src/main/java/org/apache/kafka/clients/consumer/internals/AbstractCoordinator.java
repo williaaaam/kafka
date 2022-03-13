@@ -242,7 +242,9 @@ public abstract class AbstractCoordinator implements Closeable {
                 fatalFindCoordinatorException = null;
                 throw fatalException;
             }
+            // 查找coordinator并发送
             final RequestFuture<Void> future = lookupCoordinator();
+            // 拉取服务端数据(kafka-cluster->ConsumerNetworkClient)
             client.poll(future, timer);
 
             if (!future.isDone()) {
@@ -283,6 +285,7 @@ public abstract class AbstractCoordinator implements Closeable {
                 log.debug("No broker available to send FindCoordinator request");
                 return RequestFuture.noBrokersAvailable();
             } else {
+                // 有节点接受查找coordinator请求
                 findCoordinatorFuture = sendFindCoordinatorRequest(node);
             }
         }
@@ -815,10 +818,12 @@ public abstract class AbstractCoordinator implements Closeable {
     private RequestFuture<Void> sendFindCoordinatorRequest(Node node) {
         // initiate the group metadata request
         log.debug("Sending FindCoordinator request to broker {}", node);
+        // 查找coordinator
         FindCoordinatorRequestData data = new FindCoordinatorRequestData()
                 .setKeyType(CoordinatorType.GROUP.id())
                 .setKey(this.rebalanceConfig.groupId);
         FindCoordinatorRequest.Builder requestBuilder = new FindCoordinatorRequest.Builder(data);
+        // 发送给服务端
         return client.send(node, requestBuilder)
                 .compose(new FindCoordinatorResponseHandler());
     }

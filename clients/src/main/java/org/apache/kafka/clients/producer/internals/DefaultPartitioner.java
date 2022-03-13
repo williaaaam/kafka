@@ -64,10 +64,12 @@ public class DefaultPartitioner implements Partitioner {
      */
     public int partition(String topic, Object key, byte[] keyBytes, Object value, byte[] valueBytes, Cluster cluster,
                          int numPartitions) {
+        // 没有指定key, 默认按照sticky分区策略
         if (keyBytes == null) {
             return stickyPartitionCache.partition(topic, cluster);
         }
         // hash the keyBytes to choose a partition
+        // 否则按照 key hashcode % 分区数
         return Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
     }
 
